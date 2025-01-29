@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gyro Phone Mouse</title>
+    <style>
+      body {
+        margin: 0;
+        width: 100vw;
+        height: 100vh;
+        background: black;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        touch-action: none;
+        font-family: Arial, sans-serif;
+      }
+      .button {
+        width: 50%;
+        padding: 15px;
+        margin: 10px;
+        background: gray;
+        text-align: center;
+        border-radius: 10px;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="button" id="leftClick">Left Click</div>
+    <div class="button" id="rightClick">Right Click</div>
+
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+      const socket = io("ws://192.168.43.200:5000"); // Replace with your Flask server IP
+
+      document.getElementById("leftClick").addEventListener("click", () => {
+        socket.emit("leftclick");
+      });
+
+      document.getElementById("rightClick").addEventListener("click", () => {
+        socket.emit("rightclick");
+      });
+
+      let touchStartX = 0;
+      let touchStartY = 0;
+
+      // Capture touch start event
+      document.body.addEventListener("touchstart", (e) => {
+        const touch = e.touches[0];
+        touchStartX = touch.pageX;
+        touchStartY = touch.pageY;
+      });
+
+      // Capture touch move event to simulate mouse movement
+      document.body.addEventListener("touchmove", (e) => {
+        const touch = e.touches[0];
+        const dx = touch.pageX - touchStartX;
+        const dy = touch.pageY - touchStartY;
+
+        // Send touch movement data to the server
+        socket.emit("mousemove", { dx, dy });
+
+        touchStartX = touch.pageX;
+        touchStartY = touch.pageY;
+      });
+
+      // Handle pinch to zoom (two-finger touch)
+      document.body.addEventListener("touchmove", (e) => {
+        if (e.touches.length == 2) {
+          const dist = Math.hypot(
+            e.touches[1].pageX - e.touches[0].pageX,
+            e.touches[1].pageY - e.touches[0].pageY
+          );
+
+          // Send zoom data to the server based on the change in distance
+          if (dist > 100) {
+            socket.emit("zoom", { dy: 1 });
+          } else {
+            socket.emit("zoom", { dy: -1 });
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
